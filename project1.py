@@ -1,5 +1,7 @@
 #eight puzzle solver
 import random
+import copy
+from collections import deque
 
 #some useful globals
 ops = ['up','down','left','right']
@@ -16,12 +18,12 @@ puzzles = {
 "2": [[1,8,2],
       [0,4,3],
       [7,6,5]],
-"3": [[2,6,1],
-      [0,7,8],
-      [3,5,4]],
+"3": [[7,6,2],
+      [5,0,1],
+      [4,3,8]],
 "impossible": [[1,2,3],
-            [4,5,6],
-            [8,7,0]]
+               [4,5,6],
+               [8,7,0]]
 }
 
 #Puzzle class holds current arrangement of nummbers and the position of the zero
@@ -46,44 +48,60 @@ class Node:
     def __init__(self, puzzle, steps):
         self.puzzle = puzzle
         self.steps = steps
-        
-    def move(self,direction):
-        #check for illegal moves
-        if direction not in ops:
-            return False
-        if (direction == 'up' and self.puzzle.zero[0] == 0) or (direction == 'down' and self.puzzle.zero[0] == len(self.puzzle)) or (direction == 'left' and self.puzzle.zero[1] == 0) or (direction == 'right' and self.puzzle.zero[1] == len(self.puzzle)):
-            return False
-        #perform move and return as a new node
-        x = self.puzzle.zero[0]
-        y = self.puzzle.zero[1]
-        new_steps = self.steps
-        new_puzzle = self.puzzle
-        if direction == 'up':
-            new_puzzle.puzzle[x][y], new_puzzle.puzzle[x-1][y] = new_puzzle.puzzle[x-1][y], new_puzzle.puzzle[x][y]
-            new_puzzle.zero = [x-1,y]
-        if direction == 'down':
-            new_puzzle.puzzle[x][y], new_puzzle.puzzle[x+1][y] = new_puzzle.puzzle[x+1][y], new_puzzle.puzzle[x][y]
-            new_puzzle.zero = [x+1,y]
-        if direction == 'left':
-            new_puzzle.puzzle[x][y], new_puzzle.puzzle[x][y-1] = new_puzzle.puzzle[x][y-1], new_puzzle.puzzle[x][y]
-            new_puzzle.zero = [x,y-1]
-        if direction == 'right':
-            new_puzzle.puzzle[x][y], new_puzzle.puzzle[x][y+1] = new_puzzle.puzzle[x][y+1], new_puzzle.puzzle[x][y]
-            new_puzzle.zero = [x,y+1]
-        return Node(new_puzzle, new_steps.append(direction))
+
+#make the specified move and return as a new node
+def move(n,direction):
+    #check for illegal moves
+    if direction not in ops:
+        return False
+    max_size = len(n.puzzle.puzzle) - 1
+    if (direction == 'up' and n.puzzle.zero[0] == 0) or (direction == 'down' and n.puzzle.zero[0] == max_size) or (direction == 'left' and n.puzzle.zero[1] == 0) or (direction == 'right' and n.puzzle.zero[1] == max_size):
+        return False
+    #perform move and return as a new node
+    x = n.puzzle.zero[0]
+    y = n.puzzle.zero[1]
+    new_steps = copy.deepcopy(n.steps)
+    new_steps.append(direction)
+    new_puzzle = Puzzle(copy.deepcopy(n.puzzle.puzzle))
+    if direction == 'up':
+        new_puzzle.puzzle[x][y], new_puzzle.puzzle[x-1][y] = new_puzzle.puzzle[x-1][y], new_puzzle.puzzle[x][y]
+        new_puzzle.zero = [x-1,y]
+    if direction == 'down':
+        new_puzzle.puzzle[x][y], new_puzzle.puzzle[x+1][y] = new_puzzle.puzzle[x+1][y], new_puzzle.puzzle[x][y]
+        new_puzzle.zero = [x+1,y]
+    if direction == 'left':
+        new_puzzle.puzzle[x][y], new_puzzle.puzzle[x][y-1] = new_puzzle.puzzle[x][y-1], new_puzzle.puzzle[x][y]
+        new_puzzle.zero = [x,y-1]
+    if direction == 'right':
+        new_puzzle.puzzle[x][y], new_puzzle.puzzle[x][y+1] = new_puzzle.puzzle[x][y+1], new_puzzle.puzzle[x][y]
+        new_puzzle.zero = [x,y+1]
+    return Node(new_puzzle, new_steps)
             
+def UniformCostSearch(n):
+    visited = deque([])
+    leaves = deque([])
+    while(not n.puzzle.solved()):
+        visited.append(copy.deepcopy(n.puzzle.puzzle))
+        for o in ops:
+            s = move(n,o)
+            if s and s.puzzle.puzzle not in visited:
+                leaves.append(copy.deepcopy(s))
+        leaves = deque(sorted(leaves, key=lambda x: len(x.steps), reverse=False))
+        n = leaves.popleft()
+    print("goal state reached in " + str(len(n.steps)) + " steps:\n",n.steps)
+    
+#def AStarMisplacedTile(root):
+    
 
-#def AStarMisplacedTile():
-
-#def UniformCostSearch():
+#def AStarManhattan(root):
+    
     
 
 #run the program, collect user input
-print("Welcome to Nate Mueller's 8-puzzle solver.")
+print("Welcome to Nathan Mueller's 8-puzzle solver.")
+
 p = Puzzle(puzzles[str(random.randint(0,3))])
-puzzle_choice = input("Type '1' to use a default puzzle, or '2' to enter your own.\n")
-#if 2 then create a new puzzle
-if puzzle_choice == "2":
+if input("Type '1' to use a default puzzle, or '2' to enter your own.\n") == "2":
     print("Enter your puzzle, using a zero to represent the blank. " +
     "Please only enter valid 8-puzzles. Enter the puzzle demilimiting " +
     "the numbers with a space. RET only when finished." + '\n')
@@ -99,20 +117,16 @@ if puzzle_choice == "2":
         puzzle_row_three[i] = int(puzzle_row_three[i])
     p = Puzzle([puzzle_row_one, puzzle_row_two, puzzle_row_three])
 
+print("Puzzle is: ")
+p.print()
+
 algo_choice = input("Enter your choice of algorithm\n   1. Uniform Cost Search\n   2. A* with the Misplaced Tile heuristic\n   3. A* with the Manhattan distance heuristic\n")
 
-
-
+if algo_choice == "1":
+    UniformCostSearch(Node(p,[]))
 '''
-#some tests
-p = Puzzle(puzzles['0'])
-n1 = Node(p,[])
-n1.puzzle.print()
-n2 = n1.move('left')
-n2.puzzle.print()
-n3 = n2.move('up')
-n3.puzzle.print()
-n4 = n3.move('up')
-n4.puzzle.print()
-print(n4.steps)
+if algo_choice == "2":
+    AStarMisplacedTile(Node(p,[]))
+if algo_choice == "3":
+    AStarManhattan(Node(p,[]))
 '''
