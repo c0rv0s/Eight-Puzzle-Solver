@@ -104,10 +104,11 @@ def UniformCostSearch(n, heuristic):
         # default value, uniform cost heuristic just pops first element
         index = hn = gn = 0
         shortest = sys.maxsize
-        if heuristic != "1":
-            for i in range(len(leaves)):
-                hn = 0
-                gn = len(leaves[i].steps)
+    
+        for i in range(len(leaves)):
+            hn = 0
+            gn = len(leaves[i].steps)
+            if heuristic != "1":
                 for x in range(len(leaves[i].puzzle.puzzle)):
                     for y in range(len(leaves[i].puzzle.puzzle[x])):
                         #count number of tiles out of place
@@ -120,9 +121,9 @@ def UniformCostSearch(n, heuristic):
                             if num != 0:
                                 hn += abs(x-goal_indices[num][0])
                                 hn += abs(y-goal_indices[num][1])
-                if hn + gn < shortest:
-                    shortest = hn + gn
-                    index = i
+            if hn + gn < shortest:
+                shortest = hn + gn
+                index = i
                     
         #analytics book keeping
         if len(leaves) > max_queue_size:
