@@ -102,7 +102,7 @@ def UniformCostSearch(n, heuristic):
                 leaves.append(copy.deepcopy(s))
            
         # default value, uniform cost heuristic just pops first element
-        index = hn = gn = 0
+        index = hn = gn = shn = sgn = 0
         shortest = sys.maxsize
     
         for i in range(len(leaves)):
@@ -123,6 +123,8 @@ def UniformCostSearch(n, heuristic):
                                 hn += abs(y-goal_indices[num][1])
             if hn + gn < shortest:
                 shortest = hn + gn
+                sgn = gn
+                shn = hn
                 index = i
                     
         #analytics book keeping
@@ -133,7 +135,7 @@ def UniformCostSearch(n, heuristic):
         #traceback stuff
         traceback = True
         if not n.puzzle.solved() and traceback:
-            print("The best state to expand with a g(n) = "+str(gn)+" and h(n) = "+str(hn)+" is...\n")
+            print("The best state to expand with a g(n) = "+str(sgn)+" and h(n) = "+str(shn)+" is...\n")
             n.puzzle.print()
     print("Goal!!")
     return n.steps, len(visited), max_queue_size
