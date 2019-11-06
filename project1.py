@@ -92,6 +92,8 @@ def UniformCostSearch(n, heuristic):
     max_queue_size = 0
     visited = []
     leaves = []
+    print("Expanding state ")
+    n.puzzle.print()
     while(not n.puzzle.solved()):
         visited.append(copy.deepcopy(n.puzzle.puzzle))
         for o in ops:
@@ -100,44 +102,39 @@ def UniformCostSearch(n, heuristic):
                 leaves.append(copy.deepcopy(s))
            
         # default value, uniform cost heuristic just pops first element
-        index = 0
+        index = hn = gn = 0
         shortest = sys.maxsize
-                   
-        #misplaced tile
-        if heuristic == "2":
+        if heuristic != "1":
             for i in range(len(leaves)):
-                l = len(leaves[i].steps)
-                #count number of tiles out of place
-                #add to number of steps since root
+                hn = 0
+                gn = len(leaves[i].steps)
                 for x in range(len(leaves[i].puzzle.puzzle)):
                     for y in range(len(leaves[i].puzzle.puzzle[x])):
-                        if leaves[i].puzzle.puzzle[x][y] != 0 and leaves[i].puzzle.puzzle[x][y] != goal[x][y]:
-                            l += 1
-                if l < shortest:
-                    shortest = l
+                        #count number of tiles out of place
+                        if heuristic == "2":
+                            if leaves[i].puzzle.puzzle[x][y] != 0 and leaves[i].puzzle.puzzle[x][y] != goal[x][y]:
+                                hn += 1
+                        #count manhattan distance for each tile out of place
+                        elif heuristic == "3":
+                            num = leaves[i].puzzle.puzzle[x][y]
+                            if num != 0:
+                                hn += abs(x-goal_indices[num][0])
+                                hn += abs(y-goal_indices[num][1])
+                if hn + gn < shortest:
+                    shortest = hn + gn
                     index = i
                     
-        #manhattan dist.
-        elif heuristic == "3":
-            for i in range(len(leaves)):
-                l = len(leaves[i].steps)
-                #count manhattan distance for each tile out of place
-                #add to number of steps since root
-                for x in range(len(leaves[i].puzzle.puzzle)):
-                    for y in range(len(leaves[i].puzzle.puzzle[x])):
-                        num = leaves[i].puzzle.puzzle[x][y]
-                        if num != 0:
-                            l += abs(x-goal_indices[num][0])
-                            l += abs(y-goal_indices[num][1])
-                if l < shortest:
-                    shortest = l
-                    index = i
-        
         #analytics book keeping
         if len(leaves) > max_queue_size:
             max_queue_size = len(leaves)
         
         n = leaves.pop(index)
+        #traceback stuff
+        traceback = True
+        if not n.puzzle.solved() and traceback:
+            print("The best state to expand with a g(n) = "+str(gn)+" and h(n) = "+str(hn)+" is...\n")
+            n.puzzle.print()
+    print("Goal!!")
     return n.steps, len(visited), max_queue_size
     
 #run the program, collect user input
@@ -179,18 +176,8 @@ def main():
         return False
 
     steps, nodes_expanded, max_queue_size = UniformCostSearch(Node(p,[]),algo_choice)
-    print("goal state reached in " + str(len(steps)) + " steps:\n", steps)
-    print("nodes expanded: " +str(nodes_expanded)+" max queue size: "+str(max_queue_size)+"\n")
-    
-    if input("Would you like to see a traceback? Type '1' for yes or '2' for no.\n") == "1":
-        print("Starting position: \n")
-        p.print()
-        print("Steps: \n")
-        pn = Node(p,[])
-        for step in steps:
-            pn = move(pn, step)
-            pn.puzzle.print()
-        
+    print("Goal state reached in " + str(len(steps)) + " steps:\n", steps)
+    print("Nodes expanded: " +str(nodes_expanded)+" Max queue size: "+str(max_queue_size)+"\n")
 
 if __name__== "__main__":
     main()
