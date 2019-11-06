@@ -2,6 +2,7 @@
 import random
 import copy
 import sys
+import matplotlib as plt
 
 #some useful globals
 ops = ['up','down','left','right']
@@ -10,16 +11,19 @@ goal = [[1,2,3],
         [7,8,0]]
 goal_indices = [[0,0],[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1]]
 puzzles = {
-"0": [[1,2,3],
+"0": [[1,2,3],  #2 steps
       [4,0,6],
       [7,5,8]],
-"1": [[1,2,3],
+"1": [[1,2,3],  #3 steps
       [0,4,6],
       [7,5,8]],
-"2": [[1,8,2],
+"2": [[2,0,3],  #5 steps
+      [1,4,6],
+      [7,5,8]],
+"3": [[1,8,2],  #9 steps
       [0,4,3],
       [7,6,5]],
-"3": [[7,6,2],
+"4": [[7,6,2],  #20 steps
       [5,0,1],
       [4,3,8]],
 "impossible": [[1,2,3],
@@ -31,10 +35,14 @@ puzzles = {
 class Puzzle:
     def __init__(self, startPostition):
         self.puzzle = startPostition
+        self.zero = [-1,-1]
         for i in range(len(startPostition)):
+            if self.zero[0] >= 0:
+                break
             for j in range(len(startPostition[i])):
                 if startPostition[i][j] == 0:
                     self.zero = [i,j]
+                    break
     
     def solved(self):
         return self.puzzle == goal
@@ -50,7 +58,8 @@ class Node:
         self.puzzle = puzzle
         self.steps = steps
 
-#make the specified move and return as a new node
+#move the blank tile in the specified direction and return as a new node
+#return False for illegal moves
 def move(n,direction):
     #check for illegal moves
     if direction not in ops:
@@ -80,6 +89,7 @@ def move(n,direction):
      
 #search algorithm
 def UniformCostSearch(n, heuristic):
+    max_queue_size = 0
     visited = []
     leaves = []
     while(not n.puzzle.solved()):
@@ -88,20 +98,13 @@ def UniformCostSearch(n, heuristic):
             s = move(n,o)
             if s and s.puzzle.puzzle not in visited:
                 leaves.append(copy.deepcopy(s))
-                
+           
+        # default value, uniform cost heuristic just pops first element
         index = 0
         shortest = sys.maxsize
-        
-        #uniform cost, return the element with the shortest list of steps
-        if heuristic == "1":
-            for i in range(len(leaves)):
-                l = len(leaves[i].steps)
-                if l < shortest:
-                    shortest = l
-                    index = i
-                    
+                   
         #misplaced tile
-        elif heuristic == "2":
+        if heuristic == "2":
             for i in range(len(leaves)):
                 l = len(leaves[i].steps)
                 #count number of tiles out of place
@@ -119,7 +122,7 @@ def UniformCostSearch(n, heuristic):
             for i in range(len(leaves)):
                 l = len(leaves[i].steps)
                 #count manhattan distance for each tile out of place
-                #add to number of steps since root 
+                #add to number of steps since root
                 for x in range(len(leaves[i].puzzle.puzzle)):
                     for y in range(len(leaves[i].puzzle.puzzle[x])):
                         num = leaves[i].puzzle.puzzle[x][y]
@@ -129,27 +132,30 @@ def UniformCostSearch(n, heuristic):
                 if l < shortest:
                     shortest = l
                     index = i
-        #bad input
-        else:
-            print("heuristic not recognized")
-            return False
-                    
-        n = leaves.pop(index)
         
-    print("goal state reached in " + str(len(n.steps)) + " steps:\n",n.steps)
-    
-    
+        #analytics book keeping
+        if len(leaves) > max_queue_size:
+            max_queue_size = len(leaves)
+        
+        n = leaves.pop(index)
+    return n.steps, len(visited), max_queue_size
     
 #run the program, collect user input
 def main():
     print("Welcome to Nathan Mueller's 8-puzzle solver.")
 
-    p = Puzzle(puzzles[str(random.randint(0,3))])
+    p = Puzzle(puzzles[str(random.randint(0,4))])
     puzzle_choice = input("Type '1' to use a default puzzle, or '2' to enter your own.\n")
-    if puzzle_choice == "2":
+    if puzzle_choice == "1":
+        dif = input("Select a difficulty (0-4, or 5, which is impossible to solve)\n")
+        if dif not in ["0","1","2","3","4","5"]:
+            print("input not recognized")
+            return False
+        p = Puzzle(puzzles[dif])
+    elif puzzle_choice == "2":
         print("Enter your puzzle, using a zero to represent the blank. " +
         "Please only enter valid 8-puzzles. Enter the puzzle demilimiting " +
-        "the numbers with a space. RET only when finished." + '\n')
+        "the numbers with a space. RET only when finished.\n")
         puzzle_row_one = input("Enter the first row: ")
         puzzle_row_two = input("Enter the second row: ")
         puzzle_row_three = input("Enter the third row: ")
@@ -161,16 +167,30 @@ def main():
             puzzle_row_two[i] = int(puzzle_row_two[i])
             puzzle_row_three[i] = int(puzzle_row_three[i])
         p = Puzzle([puzzle_row_one, puzzle_row_two, puzzle_row_three])
-    elif puzzle_choice != "1":
+    else:
         print("input not recognized")
         return False
-
     print("Puzzle is: ")
     p.print()
 
     algo_choice = input("Enter your choice of algorithm\n   1. Uniform Cost Search\n   2. A* with the Misplaced Tile heuristic\n   3. A* with the Manhattan distance heuristic\n")
+    if algo_choice not in ["1","2","3"]:
+        print("input not recognized")
+        return False
 
-    UniformCostSearch(Node(p,[]),algo_choice)
+    steps, nodes_expanded, max_queue_size = UniformCostSearch(Node(p,[]),algo_choice)
+    print("goal state reached in " + str(len(steps)) + " steps:\n", steps)
+    print("nodes expanded: " +str(nodes_expanded)+" max queue size: "+str(max_queue_size)+"\n")
+    
+    if input("Would you like to see a traceback? Type '1' for yes or '2' for no.\n") == "1":
+        print("Starting position: \n")
+        p.print()
+        print("Steps: \n")
+        pn = Node(p,[])
+        for step in steps:
+            pn = move(pn, step)
+            pn.puzzle.print()
+        
 
 if __name__== "__main__":
     main()
